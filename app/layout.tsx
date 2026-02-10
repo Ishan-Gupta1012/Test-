@@ -9,7 +9,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "StreamDash - Video Streaming Dashboard",
+  title: "CTO Demo Video - Video Streaming Dashboard",
   description: "Modern video streaming dashboard with analytics and VdoCipher integration",
 };
 

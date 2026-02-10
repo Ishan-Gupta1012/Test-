@@ -1,117 +1,95 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import {
-    Play,
-    Pause,
-    SkipBack,
-    SkipForward,
-    Settings,
-    Maximize,
-    Volume2,
-    VolumeX,
-} from "lucide-react";
-import { mockVideos } from "@/lib/videos";
+import { useState, useEffect } from "react";
+import { Loader2, AlertCircle } from "lucide-react";
 
-export interface YouTubePlayerProps {
+interface VdoCipherPlayerProps {
     videoId: string;
-    onVideoEnd?: () => void;
 }
 
-export default function YouTubePlayer({ videoId, onVideoEnd }: YouTubePlayerProps) {
-    const [playing, setPlaying] = useState(false);
-    const [showControls, setShowControls] = useState(true);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const [showSettings, setShowSettings] = useState(false);
-    const iframeRef = useRef<HTMLIFrameElement>(null);
-    const containerRef = useRef<HTMLDivElement>(null);
+interface OtpResponse {
+    otp: string;
+    playbackInfo: string;
+    error?: string;
+    details?: string;
+}
 
-    const currentVideo = mockVideos.find(v => v.id === videoId);
-    const currentIndex = mockVideos.findIndex(v => v.id === videoId);
-    const hasNext = currentIndex < mockVideos.length - 1;
-    const hasPrevious = currentIndex > 0;
+export default function VideoPlayer({ videoId }: VdoCipherPlayerProps) {
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [playerData, setPlayerData] = useState<OtpResponse | null>(null);
 
     useEffect(() => {
-        let timeout: NodeJS.Timeout;
-        if (showControls) {
-            timeout = setTimeout(() => setShowControls(false), 3000);
+        const fetchOtp = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                // Fetch OTP from our backend API
+                const response = await fetch(`/api/videos/${videoId}/otp`, {
+                    method: "POST",
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || "Failed to load video");
+                }
+
+                setPlayerData(data);
+            } catch (err) {
+                console.error("Error loading video:", err);
+                setError(err instanceof Error ? err.message : "An error occurred");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (videoId) {
+            fetchOtp();
         }
-        return () => clearTimeout(timeout);
-    }, [showControls]);
+    }, [videoId]);
 
-    const handleNext = () => {
-        if (hasNext) {
-            window.location.href = `/player/${mockVideos[currentIndex + 1].id}`;
-        }
-    };
-
-    const handlePrevious = () => {
-        if (hasPrevious) {
-            window.location.href = `/player/${mockVideos[currentIndex - 1].id}`;
-        }
-    };
-
-    // Build YouTube embed URL with autoplay
-    const youtubeUrl = `https://www.youtube.com/embed/${currentVideo?.youtubeId}?autoplay=0&controls=1&modestbranding=1&rel=0&enablejsapi=1`;
-
-    return (
-        <div
-            ref={containerRef}
-            className="relative bg-black rounded-xl overflow-hidden group"
-            onMouseMove={() => setShowControls(true)}
-            onMouseLeave={() => setShowControls(false)}
-        >
-            {/* YouTube Iframe Player */}
-            <div className="relative aspect-video bg-black">
-                <iframe
-                    ref={iframeRef}
-                    src={youtubeUrl}
-                    title={currentVideo?.title || "YouTube video player"}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-full"
-                />
-            </div>
-
-            {/* Custom Controls Overlay */}
-            <div
-                className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 transition-opacity duration-300 ${showControls ? "opacity-100" : "opacity-0"
-                    }`}
-            >
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        {/* Previous */}
-                        <button
-                            onClick={handlePrevious}
-                            disabled={!hasPrevious}
-                            className="text-white p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Previous video"
-                        >
-                            <SkipBack size={20} />
-                        </button>
-
-                        {/* Next */}
-                        <button
-                            onClick={handleNext}
-                            disabled={!hasNext}
-                            className="text-white p-2 hover:bg-white/20 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            aria-label="Next video"
-                        >
-                            <SkipForward size={20} />
-                        </button>
-
-                        <span className="text-white text-sm">
-                            Video {currentIndex + 1} of {mockVideos.length}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <span className="text-gray-400 text-xs">
-                            Use YouTube player controls for playback
-                        </span>
-                    </div>
+    if (loading) {
+        return (
+            <div className="aspect-video bg-slate-900 rounded-xl flex items-center justify-center">
+                <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <Loader2 className="animate-spin" size={32} />
+                    <span>Loading secure player...</span>
                 </div>
             </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="aspect-video bg-slate-900 rounded-xl flex items-center justify-center border border-red-900/30">
+                <div className="flex flex-col items-center gap-2 text-red-400">
+                    <AlertCircle size={32} />
+                    <span className="text-sm font-medium">Unable to load video</span>
+                    <span className="text-xs text-red-500/70">{error}</span>
+                </div>
+            </div>
+        );
+    }
+
+    if (!playerData?.otp || !playerData?.playbackInfo) {
+        return (
+            <div className="aspect-video bg-slate-900 rounded-xl flex items-center justify-center">
+                <span className="text-slate-500">Video source unavailable</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="relative bg-black rounded-xl overflow-hidden shadow-2xl shadow-black/50 aspect-video">
+            <iframe
+                src={`https://player.vdocipher.com/v2/?otp=${playerData.otp}&playbackInfo=${playerData.playbackInfo}`}
+                className="absolute inset-0 w-full h-full border-0"
+                allow="encrypted-media"
+                allowFullScreen
+                title="VdoCipher Secure Player"
+            />
         </div>
     );
 }

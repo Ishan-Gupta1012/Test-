@@ -47,7 +47,7 @@ export default function Sidebar() {
                 <div className="p-6" style={{ borderBottom: '1px solid #2d2d44' }}>
                     <h1 className="text-2xl font-bold flex items-center gap-2" style={{ color: '#e4e4e7' }}>
                         <Video className="text-purple-500" size={28} />
-                        StreamDash
+                        CTO Demo Video
                     </h1>
                 </div>
 
@@ -92,7 +92,7 @@ export default function Sidebar() {
                 {/* Footer */}
                 <div className="p-4" style={{ borderTop: '1px solid #2d2d44' }}>
                     <p className="text-xs text-center" style={{ color: '#64748b' }}>
-                        © 2024 StreamDash
+                        © 2024 CTO Demo Video
                     </p>
                 </div>
             </aside>
